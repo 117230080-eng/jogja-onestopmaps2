@@ -1,0 +1,1384 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Jogja One-Stop Maps | WebGIS Wisata Alam DIY</title>
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+
+  <!-- Marker Cluster -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+  <!-- Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --bg:#f6f9ff;
+      --text:#102137;
+      --muted:#5d7188;
+      --line:#dbe7f4;
+      --blue:#2f7cff;
+      --cyan:#20d7ff;
+      --emerald:#1bc78f;
+      --dark-line:rgba(157,186,219,.23);
+      --shadow-soft:0 14px 34px rgba(17,35,60,.10);
+      --shadow-dark:0 16px 38px rgba(2,10,24,.35);
+    }
+
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%}
+    html{scroll-behavior:smooth}
+    body{font-family:Inter,sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden}
+
+    button,a{outline:none}
+    button:focus-visible,a:focus-visible{
+      box-shadow:0 0 0 3px rgba(47,124,255,.25);
+      border-radius:10px;
+    }
+
+    .container{width:min(1200px,calc(100% - 28px));margin:auto}
+
+    /* ===== Landing ===== */
+    .landing{min-height:100vh;position:relative;overflow:hidden;background:#f8fbff}
+    .mesh1,.mesh2{position:absolute;border-radius:50%;pointer-events:none}
+    .mesh1{width:620px;height:620px;right:-120px;top:-160px;background:radial-gradient(circle,rgba(47,124,255,.17),rgba(32,215,255,.08),transparent 72%)}
+    .mesh2{width:480px;height:480px;left:-160px;top:300px;background:radial-gradient(circle,rgba(27,199,143,.12),rgba(47,124,255,.06),transparent 72%)}
+
+    .lp-nav{
+      position:sticky;top:0;z-index:100;height:68px;
+      background:rgba(248,251,255,.86);backdrop-filter:blur(10px);
+      border-bottom:1px solid #e2edf8;display:flex;align-items:center;
+    }
+    .lp-nav-inner{display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .brand{display:flex;align-items:center;gap:10px}
+    .logo{
+      width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;
+      background:linear-gradient(135deg,var(--blue),var(--cyan));box-shadow:0 10px 20px rgba(47,124,255,.25)
+    }
+    .brand h1{font-size:.98rem;font-weight:900;color:#10243b}
+    .brand small{display:block;color:#647f98;font-size:.72rem}
+
+    .nav-links{display:flex;gap:16px;list-style:none}
+    .nav-links a{text-decoration:none;color:#36506b;font-weight:600;font-size:.86rem}
+    .nav-actions{display:flex;gap:8px}
+
+    .btn{border:none;border-radius:10px;padding:9px 13px;font-weight:700;font-size:.84rem;cursor:pointer;transition:.2s}
+    .btn-outline{background:#fff;border:1px solid #d4e2ef;color:#1e3850}
+    .btn-primary{color:#fff;background:linear-gradient(135deg,var(--blue),#4a95ff);box-shadow:0 12px 22px rgba(47,124,255,.26)}
+    .btn-primary:hover{transform:translateY(-1px)}
+
+    .hero{padding:44px 0 36px;position:relative;z-index:2}
+    .hero-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:20px;align-items:center}
+    .chip{display:inline-flex;align-items:center;gap:8px;padding:7px 11px;border-radius:999px;background:#eef5ff;border:1px solid #d7e8fa;color:#2f5478;font-size:.74rem;font-weight:800;letter-spacing:.2px;margin-bottom:12px}
+    .hero h2{font-size:clamp(1.7rem,4.6vw,3rem);line-height:1.08;color:#0f2036;letter-spacing:-.8px;margin-bottom:10px}
+    .hero p{font-size:.95rem;color:#526c84;line-height:1.78;max-width:700px;margin-bottom:16px}
+    .hero-actions{display:flex;gap:8px;flex-wrap:wrap}
+
+    .hero-preview{
+      border-radius:18px;border:1px solid #d7e5f4;background:#fff;box-shadow:0 16px 34px rgba(14,31,52,.14);overflow:hidden;
+    }
+    .hero-preview-head{height:40px;background:#f2f8ff;border-bottom:1px solid #e1edf8;display:flex;align-items:center;gap:6px;padding:0 12px}
+    .dot{width:8px;height:8px;border-radius:50%}
+    .dot.red{background:#ff6f70}.dot.yellow{background:#ffd56f}.dot.green{background:#35d77e}
+    .hero-preview-body{
+      height:220px;background:linear-gradient(140deg,rgba(32,215,255,.15),rgba(47,124,255,.12)),url('https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&w=1000&q=60') center/cover no-repeat;
+      position:relative;
+    }
+
+    .section{padding:38px 0;position:relative;z-index:2}
+    .section h3{font-size:1.35rem;color:#142d48;margin-bottom:8px}
+    .section p.lead{color:#5f7890;line-height:1.75;font-size:.92rem;margin-bottom:14px}
+
+    .featured-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+    .featured-card{
+      border-radius:14px;overflow:hidden;position:relative;cursor:pointer;background:#fff;border:1px solid #dce8f5;box-shadow:var(--shadow-soft);
+      transition:.25s;
+    }
+    .featured-card:hover{transform:translateY(-3px)}
+    .featured-img-wrap{position:relative;height:155px}
+    .featured-img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .4s}
+    .featured-card:hover .featured-img{transform:scale(1.06)}
+    .featured-overlay{position:absolute;inset:auto 0 0 0;height:58%;background:linear-gradient(180deg,transparent,rgba(8,18,32,.78))}
+    .featured-meta{position:absolute;left:10px;right:10px;bottom:10px;color:#f4f9ff}
+    .featured-meta h5{font-size:.86rem;margin-bottom:2px}
+    .featured-meta small{font-size:.72rem}
+    .featured-body{padding:9px;font-size:.75rem;color:#4f6a82;display:flex;justify-content:space-between;align-items:center}
+    .chip-mini{padding:3px 7px;border-radius:999px;background:#edf5ff;border:1px solid #d8e7f8;font-size:.66rem;font-weight:800}
+
+    .cats{display:flex;flex-wrap:wrap;gap:8px}
+    .cat-tag{padding:8px 11px;border-radius:999px;background:#eef5ff;border:1px solid #d8e7f8;color:#2e5274;font-size:.8rem;font-weight:700}
+
+    .insight-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+    .ins-card{
+      border:1px solid #dce8f5;border-radius:12px;background:#fff;padding:12px;box-shadow:var(--shadow-soft)
+    }
+    .ins-card .k{font-size:.72rem;color:#68829b}
+    .ins-card .v{font-size:1rem;font-weight:800;color:#143454;margin-top:4px}
+    .ins-card .s{font-size:.72rem;color:#6b8297;margin-top:4px;line-height:1.5}
+
+    .steps{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+    .step{
+      border:1px solid #dce8f5;background:#fff;border-radius:12px;padding:12px;box-shadow:var(--shadow-soft)
+    }
+    .step .n{
+      width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--cyan));color:#fff;font-size:.75rem;font-weight:800;display:flex;align-items:center;justify-content:center;margin-bottom:7px
+    }
+    .step h5{font-size:.84rem;color:#173754;margin-bottom:4px}
+    .step p{font-size:.78rem;color:#627b92;line-height:1.6}
+
+    .collapsible{
+      border:1px solid #dce8f5;border-radius:12px;background:#fff;box-shadow:var(--shadow-soft);overflow:hidden
+    }
+    .collapsible summary{
+      list-style:none;cursor:pointer;padding:12px 14px;font-weight:700;color:#1a3b58;border-bottom:1px solid #e6eff8
+    }
+    .collapsible summary::-webkit-details-marker{display:none}
+    .collapsible-content{padding:12px 14px;color:#5f7890;line-height:1.75;font-size:.88rem}
+
+    .disclaimer{
+      margin-top:14px;font-size:.78rem;color:#6b8297;line-height:1.7;border-top:1px dashed #d4e3f2;padding-top:10px
+    }
+
+    /* ===== Dashboard ===== */
+    .dashboard-wrapper{display:none;height:100vh;overflow:hidden;animation:fadeInDash .38s ease both}
+    @keyframes fadeInDash{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+    .app{
+      height:100vh;display:grid;grid-template-rows:60px 1fr;
+      background:
+        radial-gradient(circle at 8% 0%, rgba(32,215,255,.10), transparent 26%),
+        radial-gradient(circle at 90% 10%, rgba(47,124,255,.12), transparent 28%),
+        linear-gradient(140deg,#091120,#0d1728 46%,#0b1524);
+      padding:10px;gap:10px;
+    }
+
+    .topbar{
+      border-radius:14px;border:1px solid var(--dark-line);background:rgba(20,33,52,.58);backdrop-filter:blur(10px);
+      box-shadow:var(--shadow-dark);display:flex;align-items:center;justify-content:space-between;padding:0 12px;
+    }
+    .top-left{display:flex;align-items:center;gap:9px}
+    .top-logo{width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,var(--blue),var(--cyan));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:.85rem}
+    .top-left h3{font-size:.9rem;color:#ecf6ff}.top-left small{display:block;color:#a1b8cf;font-size:.7rem}
+    .top-actions{display:flex;align-items:center;gap:7px}
+    .btn-dark{
+      border:1px solid rgba(150,182,214,.27);background:rgba(24,38,58,.66);color:#dcedff;border-radius:9px;padding:7px 10px;font-size:.76rem;font-weight:700;cursor:pointer;transition:.2s;
+    }
+    .btn-dark.primary{background:linear-gradient(135deg,var(--blue),#4d95ff);border-color:rgba(138,190,250,.40);color:#fff}
+    .time-chip{font-size:.72rem;color:#cde3f7;border:1px solid rgba(150,182,214,.27);background:rgba(22,36,55,.66);border-radius:9px;padding:6px 9px}
+
+    .main{display:grid;grid-template-columns:270px 1fr;gap:10px;min-height:0;position:relative}
+
+    .sidebar{
+      border-radius:16px;border:1px solid var(--dark-line);background:rgba(18,30,48,.56);backdrop-filter:blur(10px);
+      box-shadow:var(--shadow-dark);padding:10px;overflow:auto
+    }
+    .block{margin-bottom:10px}
+    .block h4{font-size:.76rem;color:#e2f0ff;text-transform:uppercase;letter-spacing:.35px;margin-bottom:8px}
+    .field{margin-bottom:7px}
+    .input,.select{width:100%;border:1px solid rgba(144,176,206,.26);background:rgba(24,39,59,.72);color:#e4f1ff;border-radius:10px;padding:8px 9px;font-size:.8rem;outline:none}
+    .check-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+    .check{border:1px solid rgba(144,176,206,.22);border-radius:10px;background:rgba(26,42,63,.66);padding:7px;display:flex;gap:6px;align-items:center;color:#d4e8f9;font-size:.74rem}
+    .range-row{display:flex;justify-content:space-between;color:#9cb3c9;font-size:.73rem;margin-bottom:5px}
+    .action-row{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+    .kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+    .kpi{border:1px solid rgba(144,176,206,.22);border-radius:11px;background:rgba(24,39,61,.66);padding:9px}
+    .kpi .l{font-size:.66rem;color:#9cb4c9}.kpi .v{font-size:1rem;color:#ecf6ff;font-weight:800;margin-top:4px}.kpi .s{font-size:.66rem;color:#90a8bf;margin-top:3px}
+    .legend{border:1px solid rgba(144,176,206,.22);border-radius:11px;background:rgba(25,40,61,.62);padding:8px;color:#bfd4e8;font-size:.7rem}
+    .legend .r{display:flex;align-items:center;gap:7px;margin-bottom:5px}
+    .dotc{width:9px;height:9px;border-radius:50%}
+
+    .map-stage{
+      position:relative;border-radius:18px;border:1px solid var(--dark-line);box-shadow:var(--shadow-dark);
+      overflow:hidden;background:rgba(17,29,47,.58);backdrop-filter:blur(8px);min-height:0;
+    }
+    #map{height:100%;width:100%}
+
+    .map-tools{position:absolute;top:10px;left:10px;display:flex;gap:7px;z-index:950}
+    .tool{
+      background:rgba(18,32,50,.72);border:1px solid rgba(146,178,208,.30);color:#d8ebff;
+      border-radius:9px;padding:6px 9px;font-size:.74rem;font-weight:700;cursor:pointer;
+    }
+
+    .loading{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(8,14,24,.28);z-index:951}
+    .loading.show{display:flex}
+    .loading-box{border:1px solid rgba(145,177,207,.34);background:rgba(18,30,47,.82);color:#def0ff;border-radius:10px;padding:10px 12px;font-size:.78rem;font-weight:700;display:flex;gap:8px;align-items:center}
+    .spin{width:15px;height:15px;border:3px solid #57708a;border-top-color:#6ed8ff;border-radius:50%;animation:spin 1s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    .drawer{
+      position:absolute;right:14px;top:14px;bottom:14px;width:340px;z-index:960;
+      border-radius:16px;border:1px solid rgba(146,178,208,.26);background:rgba(17,30,48,.66);backdrop-filter:blur(12px);
+      box-shadow:var(--shadow-dark);display:flex;flex-direction:column;overflow:hidden;
+    }
+    .drawer-head{padding:10px;border-bottom:1px solid rgba(146,178,208,.20);display:flex;align-items:center;justify-content:space-between}
+    .drawer-head h5{font-size:.8rem;color:#e5f2ff}
+    .drawer-tabs{display:flex;gap:6px}
+    .tab{border:1px solid rgba(146,178,208,.24);background:rgba(24,39,59,.64);color:#c7def2;font-size:.66rem;padding:3px 7px;border-radius:999px;font-weight:700}
+    .drawer-body{padding:9px;display:grid;grid-template-rows:auto 1fr auto;gap:9px;min-height:0}
+    .chart-card,.detail-card,.list-card,.table-card{border:1px solid rgba(144,176,206,.22);border-radius:11px;background:rgba(25,41,62,.62)}
+    .chart-card,.table-card,.detail-card{padding:9px}
+    .chart-card h6,.table-card h6,.detail-card h6,.list-card h6{font-size:.74rem;color:#e4f2ff;margin-bottom:7px}
+
+    .bars2{display:grid;gap:7px}
+    .bar-row2{display:grid;grid-template-columns:100px 1fr 28px;gap:7px;align-items:center}
+    .bar-row2 span{font-size:.7rem;color:#b6cbe0}
+    .bar2{height:7px;border-radius:999px;background:rgba(33,50,73,.75);border:1px solid rgba(144,176,206,.24);overflow:hidden}
+    .bar2 i{display:block;height:100%;background:linear-gradient(90deg,var(--blue),var(--cyan))}
+
+    .list-card{padding:9px;display:flex;flex-direction:column;min-height:0}
+    .list{display:grid;gap:7px;overflow:auto}
+    .item{border:1px solid rgba(144,176,206,.24);border-radius:11px;background:rgba(27,43,64,.64);padding:9px;cursor:pointer}
+    .item.active{border-color:rgba(120,194,255,.5)}
+    .item .t{display:flex;justify-content:space-between;gap:8px;font-size:.76rem;font-weight:700;color:#e4f2ff}
+    .item .s{font-size:.7rem;color:#9db7cc;margin-top:4px}
+    .chip-mini{font-size:.62rem;padding:2px 6px;border-radius:999px;background:rgba(32,215,255,.13);border:1px solid rgba(119,212,235,.34);color:#c8f2ff}
+
+    .saved-list{display:grid;gap:7px;max-height:120px;overflow:auto}
+    .saved-item{border:1px solid rgba(144,176,206,.24);border-radius:9px;background:rgba(27,43,64,.64);padding:7px}
+    .saved-top{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+    .saved-name{font-size:.73rem;color:#e4f2ff;font-weight:700}
+    .saved-sub{margin-top:3px;font-size:.67rem;color:#9fb8cd}
+    .saved-actions{display:flex;gap:5px}
+    .saved-btn{border:1px solid rgba(144,176,206,.28);background:rgba(23,36,56,.68);color:#d9ecff;border-radius:7px;font-size:.62rem;font-weight:800;padding:3px 6px;cursor:pointer}
+
+    .detail-box{border:1px solid rgba(144,176,206,.24);border-radius:10px;background:rgba(23,38,58,.64);padding:9px;max-height:250px;overflow:auto}
+    .detail-box h4{font-size:.85rem;color:#f0f8ff;margin-bottom:6px}
+    .detail-row{font-size:.72rem;color:#bfd4e8;margin-bottom:5px}
+    .detail-row b{color:#eaf5ff}
+    .detail-actions{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:7px}
+    .a{border:1px solid rgba(144,176,206,.28);border-radius:9px;background:rgba(23,36,56,.68);color:#d9ecff;padding:7px 6px;text-align:center;text-decoration:none;font-size:.68rem;font-weight:800;cursor:pointer}
+    .a.primary{background:linear-gradient(135deg,var(--blue),#4b95ff);border-color:rgba(137,189,251,.42);color:#fff}
+    .a.full{grid-column:1/-1}
+
+    .table-wrap{border:1px solid rgba(144,176,206,.22);border-radius:10px;overflow:auto;max-height:130px;background:rgba(22,36,55,.62)}
+    table{width:100%;border-collapse:collapse;font-size:.68rem}
+    th,td{padding:6px 7px;border-bottom:1px solid rgba(128,161,192,.18);text-align:left}
+    th{position:sticky;top:0;background:rgba(29,44,67,.9);color:#ddedfb;font-size:.66rem}
+    td{color:#c0d4e8}
+
+    .poi-marker{
+      width:34px;height:34px;border-radius:12px;display:flex;align-items:center;justify-content:center;
+      color:#fff;font-size:15px;font-weight:800;border:1.5px solid rgba(255,255,255,.9);box-shadow:0 8px 18px rgba(0,0,0,.24);transform:translateY(-2px);
+      cursor:pointer;
+    }
+
+    .pop-img,.detail-img,.item-thumb{transition:transform .35s ease}
+    .item:hover .item-thumb{transform:scale(1.03)}
+
+    .pop-img{
+      width:100%;height:120px;border-radius:10px;object-fit:cover;display:block;margin-bottom:8px;
+      border:1px solid rgba(144,176,206,.22);background:linear-gradient(135deg,#1d2e47,#2a4768);
+    }
+    .detail-img{
+      width:100%;height:140px;border-radius:10px;object-fit:cover;display:block;margin-bottom:8px;
+      border:1px solid rgba(144,176,206,.22);background:linear-gradient(135deg,#1d2e47,#2a4768);
+    }
+    .item-thumb{
+      width:100%;height:80px;border-radius:10px;object-fit:cover;display:block;margin-bottom:8px;
+      border:1px solid rgba(144,176,206,.20);background:linear-gradient(135deg,#1d2e47,#2a4768);
+    }
+
+    .leaflet-popup-content-wrapper{border-radius:12px!important;background:rgba(18,30,46,.96)!important;border:1px solid rgba(144,176,206,.28)!important}
+    .leaflet-popup-tip{background:rgba(18,30,46,.96)!important}
+    .leaflet-popup-content{margin:0!important;padding:0!important;min-width:250px;max-width:280px}
+    .pop{font-size:.74rem;color:#cfe3f7}
+    .pop-h{padding:9px 10px;border-bottom:1px solid rgba(129,163,194,.24);background:rgba(30,47,69,.86);font-weight:800;color:#e9f5ff}
+    .pop-b{padding:9px 10px}
+    .pop-r{margin-bottom:6px}
+    .pop-r b{color:#eaf6ff}
+
+    .mobile-map-actions{display:none}
+    .mobile-sheet{
+      position:fixed;left:0;right:0;bottom:-120%;
+      z-index:12000;background:#0f1a2c;border-top-left-radius:16px;border-top-right-radius:16px;
+      border:1px solid rgba(157,186,219,.25);box-shadow:0 -18px 30px rgba(2,10,24,.45);
+      transition:.28s ease;max-height:68vh;overflow:auto;padding:12px;
+    }
+    .mobile-sheet.show{bottom:0}
+    .mobile-sheet h4{color:#eaf4ff;font-size:.86rem;margin-bottom:8px}
+    .mobile-sheet-close{
+      position:sticky;top:0;float:right;background:rgba(24,38,58,.66);color:#e4f1ff;border:1px solid rgba(150,182,214,.27);
+      border-radius:8px;padding:4px 8px;font-size:.72rem;font-weight:700;cursor:pointer;margin-bottom:8px;
+    }
+
+    /* Tablet kecil */
+    @media (max-width:900px){
+      .hero-grid{grid-template-columns:1fr}
+      .hero-preview{display:none}
+      .featured-grid{grid-template-columns:repeat(2,1fr)}
+      .insight-cards{grid-template-columns:repeat(2,1fr)}
+      .steps{grid-template-columns:repeat(2,1fr)}
+      .main{grid-template-columns:1fr}
+      .sidebar{display:none}
+      .drawer{display:none}
+      #tableCard,#savedPlacesCard{display:none}
+      .map-tools{display:none}
+      .mobile-map-actions{
+        display:grid;
+        grid-template-columns:repeat(4,1fr);
+        gap:6px;
+        position:absolute;left:8px;right:8px;top:8px;
+        z-index:980;
+      }
+      .mobile-map-actions button{
+        border:1px solid rgba(146,178,208,.30);
+        background:rgba(18,32,50,.76);
+        color:#e6f2ff;border-radius:9px;
+        font-size:.7rem;font-weight:700;padding:7px 5px;
+        cursor:pointer;
+      }
+      .leaflet-control-layers{display:none!important;}
+    }
+
+    /* Mobile utama */
+    @media (max-width:760px){
+      .container{width:min(1200px,calc(100% - 16px))}
+      .lp-nav{height:56px}
+      .brand small,.nav-links,.nav-actions .btn-outline{display:none}
+      .brand h1{font-size:.86rem}
+      .nav-actions .btn-primary{padding:8px 10px;font-size:.76rem}
+
+      .hero{padding:18px 0 18px}
+      .hero p{font-size:.87rem;line-height:1.65}
+      .section{padding:24px 0}
+      .featured-grid,.insight-cards,.steps{grid-template-columns:1fr}
+      .featured-img-wrap{height:140px}
+
+      .app{padding:6px;gap:6px;grid-template-rows:50px 1fr}
+      .topbar{border-radius:10px;padding:0 8px;min-height:50px}
+      .top-left small{display:none}
+      .top-left h3{font-size:.8rem}
+      .time-chip,.btn-dark:not(.mobile-back){display:none}
+      .top-actions .btn-dark.mobile-back{display:inline-block;font-size:.7rem;padding:6px 8px}
+
+      .main{grid-template-columns:1fr}
+      .map-stage{border-radius:10px}
+      .mobile-sheet{max-height:70vh}
+    }
+
+    /* HP kecil */
+    @media (max-width:480px){
+      .lp-nav{height:52px}
+      .brand h1{font-size:.8rem}
+      .hero h2{font-size:1.45rem}
+      .hero p{font-size:.82rem}
+      .mobile-map-actions button{
+        font-size:.66rem;
+        padding:6px 4px;
+      }
+      .mobile-sheet{max-height:65vh}
+    }
+  </style>
+</head>
+<body>
+  <!-- LANDING -->
+  <section class="landing" id="landingPage">
+    <div class="mesh1"></div><div class="mesh2"></div>
+
+    <header class="lp-nav">
+      <div class="container lp-nav-inner">
+        <div class="brand">
+          <div class="logo">🗺</div>
+          <div>
+            <h1>Jogja One-Stop Maps</h1>
+            <small>WebGIS Wisata Alam DIY</small>
+          </div>
+        </div>
+        <ul class="nav-links">
+          <li><a href="#overview">Beranda</a></li>
+          <li><a href="#featured-destinations">Destinasi</a></li>
+          <li><a href="#features">Kategori</a></li>
+          <li><a href="#insights">Insight</a></li>
+          <li><a href="#about-yogyakarta">Analisis</a></li>
+        </ul>
+        <div class="nav-actions">
+          <button class="btn btn-primary" onclick="enterDashboard()" aria-label="Buka peta wisata">Buka Peta</button>
+        </div>
+      </div>
+    </header>
+
+    <section class="hero" id="overview">
+      <div class="container hero-grid">
+        <div>
+          <span class="chip">Platform Informasi Geospasial Wisata Alam</span>
+          <h2>Sistem Informasi Geospasial Pariwisata Alam DIY</h2>
+          <p>Sistem ini membantu pengguna mengeksplorasi, memahami, dan menganalisis persebaran wisata alam DIY secara interaktif. Cocok untuk wisatawan umum, presentasi akademik, dan diskusi perencanaan wilayah.</p>
+          <div class="hero-actions">
+            <button class="btn btn-primary" onclick="enterDashboard()" aria-label="Buka peta wisata">Buka Peta Wisata</button>
+            <button class="btn btn-outline" onclick="scrollToSection('featured-destinations')" aria-label="Lihat destinasi unggulan">Lihat Destinasi Unggulan</button>
+          </div>
+        </div>
+        <div class="hero-preview">
+          <div class="hero-preview-head"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span></div>
+          <div class="hero-preview-body"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="featured-destinations">
+      <div class="container">
+        <h3>Destinasi Unggulan</h3>
+        <p class="lead">Klik kartu destinasi untuk langsung masuk dashboard, fokus ke lokasi, dan melihat detail.</p>
+        <div class="featured-grid" id="featuredGrid"></div>
+      </div>
+    </section>
+
+    <section class="section" id="features">
+      <div class="container">
+        <h3>Kategori Wisata</h3>
+        <p class="lead">Klasifikasi utama data wisata alam DIY untuk memudahkan pencarian.</p>
+        <div class="cats">
+          <span class="cat-tag">⛰️ Gunung</span>
+          <span class="cat-tag">🏖️ Pantai</span>
+          <span class="cat-tag">💧 Air Terjun</span>
+          <span class="cat-tag">🌲 Hutan</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="insights">
+      <div class="container">
+        <h3>Ringkasan Insight</h3>
+        <p class="lead">Ringkasan cepat hasil analisis spasial berbasis data destinasi.</p>
+        <div class="insight-cards" id="insightCards"></div>
+      </div>
+    </section>
+
+    <section class="section" id="how-it-works">
+      <div class="container">
+        <h3>Cara Menggunakan</h3>
+        <p class="lead">Langkah sederhana untuk wisatawan umum.</p>
+        <div class="steps">
+          <article class="step"><div class="n">1</div><h5>Pilih kategori wisata</h5><p>Tentukan jenis wisata: gunung, pantai, air terjun, atau hutan.</p></article>
+          <article class="step"><div class="n">2</div><h5>Gunakan filter wilayah/rating</h5><p>Sesuaikan hasil berdasarkan wilayah dan rating.</p></article>
+          <article class="step"><div class="n">3</div><h5>Klik lokasi pada peta</h5><p>Lihat foto, informasi inti, dan detail destinasi.</p></article>
+          <article class="step"><div class="n">4</div><h5>Buka rute perjalanan</h5><p>Gunakan tombol Google Maps untuk navigasi tercepat.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="about-yogyakarta">
+      <div class="container">
+        <details class="collapsible">
+          <summary>Lihat Analisis Lengkap</summary>
+          <div class="collapsible-content">
+            <p>
+              Secara geografis, DIY memiliki zonasi bentang alam yang beragam: utara dipengaruhi sistem vulkanik Merapi, selatan didominasi pesisir Samudra Hindia, dan barat berciri perbukitan. Variasi geomorfologi tersebut berhubungan langsung dengan karakter jenis wisata alam.
+            </p>
+            <p style="margin-top:8px">
+              Pola data memperlihatkan kecenderungan: selatan → wisata pantai, utara → wisata gunung/lereng Merapi, barat → lanskap perbukitan dan air terjun.
+            </p>
+          </div>
+        </details>
+
+        <div class="disclaimer">
+          <div>Data yang ditampilkan bersifat demonstrasi dan merepresentasikan prototipe aplikasi geospasial.</div>
+          <div>Informasi destinasi disusun untuk visualisasi WebGIS dan perlu verifikasi lanjutan sebelum digunakan secara operasional.</div>
+        </div>
+      </div>
+    </section>
+  </section>
+
+  <!-- DASHBOARD -->
+  <div class="dashboard-wrapper" id="dashboardWrapper">
+    <div class="app">
+      <header class="topbar">
+        <div class="top-left">
+          <div class="top-logo">🗺</div>
+          <div>
+            <h3>Jogja One-Stop Maps</h3>
+            <small>WebGIS Wisata Alam DIY</small>
+          </div>
+        </div>
+        <div class="top-actions">
+          <button class="btn-dark mobile-back" onclick="backToLanding()" aria-label="Kembali ke beranda">Kembali</button>
+          <span class="time-chip" id="timeNow">--:--:--</span>
+          <button class="btn-dark" onclick="zoomToDIY()" aria-label="Fokus ke wilayah DIY">Fokus DIY</button>
+          <button class="btn-dark primary" onclick="refreshDashboard()" aria-label="Muat ulang data dashboard">Muat Ulang</button>
+        </div>
+      </header>
+
+      <div class="main">
+        <aside class="sidebar" id="desktopSidebar">
+          <div class="block">
+            <h4>Filter Pintar</h4>
+            <div class="field"><input id="searchInput" class="input" placeholder="Cari destinasi / wilayah / kata kunci..." /></div>
+            <div class="field"><select id="kabFilter" class="select"></select></div>
+            <div class="field"><select id="sortFilter" class="select">
+              <option value="rating-desc">Urut: Rating Tertinggi</option>
+              <option value="rating-asc">Urut: Rating Terendah</option>
+              <option value="name-asc">Urut: Nama A-Z</option>
+              <option value="name-desc">Urut: Nama Z-A</option>
+            </select></div>
+
+            <div class="field">
+              <div style="font-size:.75rem;color:#a4bbd0;margin-bottom:6px;font-weight:700">Kategori (Multi-Select)</div>
+              <div class="check-grid" id="catChecks"></div>
+            </div>
+
+            <div class="field">
+              <div class="range-row"><span>Rating Minimum</span><b id="ratingVal">4.5</b></div>
+              <input id="ratingRange" type="range" min="0" max="5" step="0.1" value="4.5" style="width:100%">
+            </div>
+
+            <div class="action-row">
+              <button class="btn-dark primary" id="applyBtn" aria-label="Terapkan filter">Terapkan</button>
+              <button class="btn-dark" id="resetBtn" aria-label="Reset filter">Reset</button>
+              <button class="btn-dark" id="clearBtn" style="grid-column:1/-1" aria-label="Kosongkan semua filter">Kosongkan</button>
+            </div>
+          </div>
+
+          <div class="block">
+            <h4>Ringkasan</h4>
+            <div class="kpi-grid">
+              <div class="kpi"><div class="l">Total Destinasi</div><div class="v" id="kpiTotal">0</div><div class="s">titik</div></div>
+              <div class="kpi"><div class="l">Rata-rata Rating</div><div class="v" id="kpiAvg">0.0</div><div class="s">/5.0</div></div>
+              <div class="kpi"><div class="l">Wilayah Aktif</div><div class="v" id="kpiKab">0</div><div class="s">wilayah</div></div>
+              <div class="kpi"><div class="l">Kategori Aktif</div><div class="v" id="kpiCat">0</div><div class="s">kategori</div></div>
+            </div>
+          </div>
+
+          <div class="block">
+            <h4>Legenda</h4>
+            <div class="legend">
+              <div class="r"><span class="dotc" style="background:#1bc78f"></span>Gunung</div>
+              <div class="r"><span class="dotc" style="background:#2f7cff"></span>Pantai</div>
+              <div class="r"><span class="dotc" style="background:#20d7ff"></span>Air Terjun</div>
+              <div class="r"><span class="dotc" style="background:#7dbb3f"></span>Hutan</div>
+            </div>
+          </div>
+        </aside>
+
+        <section class="map-stage">
+          <div id="map"></div>
+
+          <div class="map-tools">
+            <button class="tool" onclick="toggleCluster()" aria-label="Aktifkan/nonaktifkan cluster">Cluster</button>
+            <button class="tool" onclick="fitToFiltered()" aria-label="Zoom ke hasil filter">Zoom Hasil</button>
+            <button class="tool" onclick="resetMapView()" aria-label="Reset posisi peta">Reset</button>
+          </div>
+
+          <div class="mobile-map-actions" id="mobile-map-actions">
+            <button onclick="openMobileSheet('filter')" aria-label="Buka panel filter">Filter</button>
+            <button onclick="openMobileSheet('list')" aria-label="Buka daftar destinasi">Daftar</button>
+            <button onclick="zoomToDIY()" aria-label="Fokus ke wilayah DIY">Fokus DIY</button>
+            <button onclick="backToLanding()" aria-label="Kembali ke beranda">Kembali</button>
+          </div>
+
+          <div class="loading" id="loading">
+            <div class="loading-box"><span class="spin"></span>Memproses data geospasial...</div>
+          </div>
+
+          <aside class="drawer" id="desktopDrawer">
+            <div class="drawer-head">
+              <h5>Panel Insight</h5>
+              <div class="drawer-tabs"><span class="tab">Live</span><span class="tab">Analytics</span></div>
+            </div>
+            <div class="drawer-body">
+              <div class="chart-card">
+                <h6>Sebaran Kategori</h6>
+                <div class="bars2" id="catBars"></div>
+              </div>
+
+              <div class="list-card">
+                <h6>Daftar Lokasi</h6>
+                <div class="list" id="locationList"></div>
+              </div>
+
+              <div class="list-card" id="savedPlacesCard">
+                <h6>Destinasi Tersimpan</h6>
+                <div class="saved-list" id="savedList"></div>
+              </div>
+
+              <div class="detail-card">
+                <h6>Detail Destinasi</h6>
+                <div class="detail-box" id="detailPanel">
+                  <div class="detail-row">Pilih destinasi dari daftar atau peta.</div>
+                </div>
+              </div>
+
+              <div class="table-card" id="tableCard">
+                <h6>Tabel Data Destinasi</h6>
+                <div class="table-wrap">
+                  <table>
+                    <thead><tr><th>Nama</th><th>Kat</th><th>Wilayah</th><th>Rating</th><th>Tiket</th></tr></thead>
+                    <tbody id="dataTable"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </aside>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <!-- MOBILE SHEETS -->
+  <div class="mobile-sheet" id="sheetFilter">
+    <button class="mobile-sheet-close" onclick="closeMobileSheets()" aria-label="Tutup panel filter">Tutup</button>
+    <h4>Filter Destinasi</h4>
+    <div class="field"><input id="mSearchInput" class="input" placeholder="Cari destinasi / wilayah / kata kunci..." /></div>
+    <div class="field"><select id="mKabFilter" class="select"></select></div>
+    <div class="field"><select id="mSortFilter" class="select">
+      <option value="rating-desc">Urut: Rating Tertinggi</option>
+      <option value="rating-asc">Urut: Rating Terendah</option>
+      <option value="name-asc">Urut: Nama A-Z</option>
+      <option value="name-desc">Urut: Nama Z-A</option>
+    </select></div>
+    <div class="field">
+      <div style="font-size:.75rem;color:#a4bbd0;margin-bottom:6px;font-weight:700">Kategori (Multi-Select)</div>
+      <div class="check-grid" id="mCatChecks"></div>
+    </div>
+    <div class="field">
+      <div class="range-row"><span>Rating Minimum</span><b id="mRatingVal">4.5</b></div>
+      <input id="mRatingRange" type="range" min="0" max="5" step="0.1" value="4.5" style="width:100%">
+    </div>
+    <div class="action-row">
+      <button class="btn-dark primary" onclick="applyMobileFilter()" aria-label="Terapkan filter mobile">Terapkan</button>
+      <button class="btn-dark" onclick="resetFilters()" aria-label="Reset filter mobile">Reset</button>
+    </div>
+  </div>
+
+  <div class="mobile-sheet" id="sheetList">
+    <button class="mobile-sheet-close" onclick="closeMobileSheets()" aria-label="Tutup daftar destinasi">Tutup</button>
+    <h4>Daftar Destinasi</h4>
+    <div class="list" id="mLocationList"></div>
+  </div>
+
+  <div class="mobile-sheet" id="sheetDetail">
+    <button class="mobile-sheet-close" onclick="closeMobileSheets()" aria-label="Tutup detail destinasi">Tutup</button>
+    <h4>Detail Destinasi</h4>
+    <div class="detail-box" id="mDetailPanel"></div>
+  </div>
+
+  <script>
+    // Test mobile dengan Chrome DevTools → Ctrl+Shift+M → pilih iPhone/Pixel → refresh.
+
+    const geojson = {
+      type:"FeatureCollection",
+      features:[
+        {type:"Feature",geometry:{type:"Point",coordinates:[110.4239,-7.6005]},properties:{id:1,name:"Kaliurang",category:"Gunung",kabupaten:"Sleman",rating:4.7,price:7500,desc:"Kawasan lereng Merapi dengan udara sejuk.",detail:"Lokasi wisata pegunungan untuk trekking ringan dan observasi lanskap.",access:"Akses mudah ±20 menit dari pusat kota.",image:"https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=1200&q=80"}},
+        {type:"Feature",geometry:{type:"Point",coordinates:[110.4414,-7.9416]},properties:{id:2,name:"Hutan Pinus Mangunan",category:"Hutan",kabupaten:"Bantul",rating:4.6,price:10000,desc:"Hutan pinus dengan panorama perbukitan.",detail:"Wisata alam berbasis hutan dengan fasilitas rekreasi dan fotografi.",access:"Akses baik ±35 menit dari pusat kota.",image:"https://images.unsplash.com/photo-1473445361085-b9a07f55608b?auto=format&fit=crop&w=1200&q=80"}},
+        {type:"Feature",geometry:{type:"Point",coordinates:[110.3298,-8.0246]},properties:{id:3,name:"Pantai Parangtritis",category:"Pantai",kabupaten:"Bantul",rating:4.5,price:5000,desc:"Pantai ikonik dengan bentang pesisir luas.",detail:"Destinasi pesisir unggulan dengan fasilitas publik relatif lengkap.",access:"Akses mudah ±30 menit dari pusat kota.",image:"https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80"}},
+        {type:"Feature",geometry:{type:"Point",coordinates:[110.6127,-8.1507]},properties:{id:4,name:"Pantai Indrayanti",category:"Pantai",kabupaten:"Gunungkidul",rating:4.8,price:15000,desc:"Pantai berpasir putih dengan air jernih.",detail:"Objek wisata pantai unggulan dengan layanan wisata yang berkembang.",access:"Akses sedang ±60 menit dari pusat kota.",image:"https://images.unsplash.com/photo-1500375592092-40eb2168fd21?auto=format&fit=crop&w=1200&q=80"}},
+        {type:"Feature",geometry:{type:"Point",coordinates:[110.5147,-7.9569]},properties:{id:5,name:"Air Terjun Sri Gethuk",category:"Air Terjun",kabupaten:"Gunungkidul",rating:4.6,price:12000,desc:"Air terjun alami kawasan karst.",detail:"Wisata air terjun dengan karakter geologi khas dan jalur trekking.",access:"Akses menantang, trekking sedang.",image:"https://images.unsplash.com/photo-1432405972618-c60b0225b8f9?auto=format&fit=crop&w=1200&q=80"}},
+        {type:"Feature",geometry:{type:"Point",coordinates:[110.1219,-7.7923]},properties:{id:6,name:"Kedung Pedut",category:"Air Terjun",kabupaten:"Kulon Progo",rating:4.5,price:10000,desc:"Kawasan wisata air dan kolam alami.",detail:"Destinasi berbasis sungai pegunungan dengan aktivitas rekreasi keluarga.",access:"Akses sedang ±50 menit dari pusat kota.",image:"https://images.unsplash.com/photo-1511497584788-876760111969?auto=format&fit=crop&w=1200&q=80"}},
+        {type:"Feature",geometry:{type:"Point",coordinates:[110.4478,-7.5827]},properties:{id:7,name:"Bukit Klangon",category:"Gunung",kabupaten:"Sleman",rating:4.7,price:5000,desc:"Titik pandang lanskap Gunung Merapi.",detail:"Lokasi observasi lanskap dan fotografi panorama pegunungan.",access:"Akses mudah ±15 menit dari Sleman.",image:"https://images.unsplash.com/photo-1464822759844-d150ad6d1df2?auto=format&fit=crop&w=1200&q=80"}},
+        {type:"Feature",geometry:{type:"Point",coordinates:[110.1297,-7.8055]},properties:{id:8,name:"Kalibiru",category:"Hutan",kabupaten:"Kulon Progo",rating:4.4,price:8000,desc:"Perbukitan hutan dengan gardu pandang.",detail:"Wisata alam berbasis hutan perbukitan dengan wahana keluarga.",access:"Akses baik ±40 menit dari pusat kota.",image:"https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=1200&q=80"}}
+      ]
+    };
+
+    const COLORS = {Gunung:"#1bc78f",Pantai:"#2f7cff","Air Terjun":"#20d7ff",Hutan:"#7dbb3f"};
+    const ICONS = {Gunung:"⛰️",Pantai:"🏖️","Air Terjun":"💧",Hutan:"🌲"};
+    const DIY_CENTER = [-7.8,110.4];
+    const DIY_ZOOM = 10;
+
+    const state = {
+      map:null,
+      mapInitialized:false,
+      layerControl:null,
+      cluster:null,
+      plainLayer:null,
+      useCluster:true,
+      markers:[],
+      filtered:[],
+      selectedCategories:new Set(),
+      selectedFeature:null,
+      bookmarks:new Set(JSON.parse(localStorage.getItem("dashboard_bookmarks") || "[]")),
+      pendingFocusId:null
+    };
+
+    const $ = id => document.getElementById(id);
+    const wait = ms => new Promise(r=>setTimeout(r,ms));
+    const debounce=(fn,d=220)=>{let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),d)}};
+    const isMobile = () => window.innerWidth <= 760;
+
+    function scrollToSection(id){ document.getElementById(id)?.scrollIntoView({behavior:"smooth",block:"start"}); }
+
+    function fallbackHTML(cls, text){
+      return `<div class="${cls}" style="display:flex;align-items:center;justify-content:center;color:#cfe3f7;font-size:.72rem;">${text}</div>`;
+    }
+
+    function saveBookmarks(){
+      localStorage.setItem("dashboard_bookmarks", JSON.stringify([...state.bookmarks]));
+    }
+
+    function getFeatureById(id){
+      return geojson.features.find(f => f.properties.id === id);
+    }
+
+    function focusDestinationById(id){
+      const f = getFeatureById(id);
+      if(!f || !state.map) return;
+      const [lng,lat] = f.geometry.coordinates;
+      state.map.flyTo([lat,lng], 13, { duration: .75 });
+      selectFeature(id);
+
+      const mk = state.markers.find(m =>
+        Math.abs(m.getLatLng().lat-lat)<1e-7 && Math.abs(m.getLatLng().lng-lng)<1e-7
+      );
+      if(mk) mk.openPopup();
+    }
+
+    function computeSpatialInsights(){
+      const feats = geojson.features;
+      const total = feats.length;
+      const categoryCount = {};
+      const regionCount = {};
+      feats.forEach(f=>{
+        const p = f.properties;
+        categoryCount[p.category] = (categoryCount[p.category] || 0) + 1;
+        regionCount[p.kabupaten] = (regionCount[p.kabupaten] || 0) + 1;
+      });
+
+      const dominantCategoryEntry = Object.entries(categoryCount).sort((a,b)=>b[1]-a[1])[0];
+      const dominantCategory = dominantCategoryEntry ? dominantCategoryEntry[0] : "-";
+      const topRegionEntry = Object.entries(regionCount).sort((a,b)=>b[1]-a[1])[0];
+      const topRegion = topRegionEntry ? topRegionEntry[0] : "-";
+      const topRegionCount = topRegionEntry ? topRegionEntry[1] : 0;
+      const topDestination = [...feats].sort((a,b)=>b.properties.rating-a.properties.rating)[0];
+
+      return {total, dominantCategory, topRegion, topRegionCount, topDestination};
+    }
+
+    function initLandingStats(){
+      const s = computeSpatialInsights();
+      const insightCards = [
+        {k:"Total Destinasi",v:s.total,s:"Jumlah destinasi wisata alam"},
+        {k:"Kategori Dominan",v:s.dominantCategory,s:"Kategori dengan jumlah terbanyak"},
+        {k:"Wilayah Terbanyak",v:s.topRegion,s:`${s.topRegionCount} destinasi`},
+        {k:"Rating Tertinggi",v:s.topDestination.properties.name,s:`⭐ ${s.topDestination.properties.rating}`}
+      ];
+      $("insightCards").innerHTML = insightCards.map(c=>`
+        <article class="ins-card">
+          <div class="k">${c.k}</div>
+          <div class="v">${c.v}</div>
+          <div class="s">${c.s}</div>
+        </article>
+      `).join("");
+    }
+
+    function renderFeaturedDestinations(){
+      const el = $("featuredGrid");
+      if(!el) return;
+
+      const top = [...geojson.features].sort((a,b)=>b.properties.rating-a.properties.rating).slice(0,4);
+
+      el.innerHTML = top.map(f=>{
+        const p = f.properties;
+        return `
+          <article class="featured-card" data-featured-id="${p.id}">
+            <div class="featured-img-wrap">
+              <img class="featured-img" src="${p.image || ""}" alt="Foto destinasi ${p.name}" loading="lazy"
+                   onerror="this.onerror=null;this.style.display='none';this.insertAdjacentHTML('afterend','<div class=&quot;featured-img&quot; style=&quot;display:flex;align-items:center;justify-content:center;color:#d7e8f8;background:linear-gradient(135deg,#1d2e47,#2a4768);&quot;>Image unavailable</div>');">
+              <div class="featured-overlay"></div>
+              <div class="featured-meta">
+                <h5>${p.name}</h5>
+                <small>${p.kabupaten} • ${p.category}</small>
+              </div>
+            </div>
+            <div class="featured-body">
+              <span>⭐ ${p.rating}</span>
+              <span class="chip-mini">Rp${p.price.toLocaleString("id-ID")}</span>
+            </div>
+          </article>
+        `;
+      }).join("");
+
+      el.querySelectorAll("[data-featured-id]").forEach(card=>{
+        card.addEventListener("click", ()=>{
+          const id = Number(card.dataset.featuredId);
+          state.pendingFocusId = id;
+          enterDashboard();
+        });
+      });
+    }
+
+    function enterDashboard(){
+      $("landingPage").style.display = "none";
+      $("dashboardWrapper").style.display = "block";
+      document.body.style.overflow = "hidden";
+
+      if(!state.mapInitialized){
+        initTopTime();
+        initFilters();
+        initMap();
+        updateDashboard();
+        state.mapInitialized=true;
+      }
+
+      setTimeout(()=>{
+        if(state.map){
+          state.map.invalidateSize();
+          if(isMobile()){
+            state.map.setView(DIY_CENTER, DIY_ZOOM);
+          }
+        }
+      },160);
+
+      if(state.pendingFocusId){
+        const targetId = state.pendingFocusId;
+        state.pendingFocusId = null;
+        setTimeout(()=>focusDestinationById(targetId), 420);
+      }
+    }
+
+    function backToLanding(){
+      $("dashboardWrapper").style.display = "none";
+      $("landingPage").style.display = "block";
+      document.body.style.overflow = "auto";
+      closeMobileSheets();
+      window.scrollTo({top:0,behavior:"smooth"});
+    }
+
+    function initTopTime(){
+      const tick=()=>{$("timeNow").textContent=new Date().toLocaleTimeString("id-ID",{hour12:false});};
+      tick();setInterval(tick,1000);
+    }
+
+    function initFilters(){
+      const kab = [...new Set(geojson.features.map(f=>f.properties.kabupaten))].sort();
+      $("kabFilter").innerHTML = `<option value="all">Semua Wilayah</option>` + kab.map(k=>`<option>${k}</option>`).join("");
+      $("mKabFilter").innerHTML = $("kabFilter").innerHTML;
+
+      const cats = [...new Set(geojson.features.map(f=>f.properties.category))].sort();
+      state.selectedCategories = new Set(cats);
+
+      $("catChecks").innerHTML = cats.map(c=>`
+        <label class="check"><input class="catcb" type="checkbox" value="${c}" checked /><span>${c}</span></label>
+      `).join("");
+
+      $("mCatChecks").innerHTML = cats.map(c=>`
+        <label class="check"><input class="mcatcb" type="checkbox" value="${c}" checked /><span>${c}</span></label>
+      `).join("");
+
+      document.querySelectorAll(".catcb").forEach(cb=>{
+        cb.addEventListener("change",(e)=>{
+          const val=e.target.value;
+          if(e.target.checked) state.selectedCategories.add(val);
+          else state.selectedCategories.delete(val);
+        });
+      });
+
+      document.querySelectorAll(".mcatcb").forEach(cb=>{
+        cb.addEventListener("change",(e)=>{
+          const val=e.target.value;
+          if(e.target.checked) state.selectedCategories.add(val);
+          else state.selectedCategories.delete(val);
+        });
+      });
+
+      $("ratingRange").addEventListener("input",e=>$("ratingVal").textContent=Number(e.target.value).toFixed(1));
+      $("mRatingRange").addEventListener("input",e=>$("mRatingVal").textContent=Number(e.target.value).toFixed(1));
+
+      $("applyBtn").addEventListener("click",updateDashboard);
+      $("searchInput").addEventListener("input",debounce(updateDashboard,220));
+      $("kabFilter").addEventListener("change",updateDashboard);
+      $("sortFilter").addEventListener("change",updateDashboard);
+      $("resetBtn").addEventListener("click",resetFilters);
+      $("clearBtn").addEventListener("click",clearFilters);
+    }
+
+    function syncMobileToDesktopFilter(){
+      $("searchInput").value = $("mSearchInput").value;
+      $("kabFilter").value = $("mKabFilter").value;
+      $("sortFilter").value = $("mSortFilter").value;
+      $("ratingRange").value = $("mRatingRange").value;
+      $("ratingVal").textContent = Number($("mRatingRange").value).toFixed(1);
+
+      const selected = new Set();
+      document.querySelectorAll(".mcatcb").forEach(cb=>{
+        if(cb.checked) selected.add(cb.value);
+      });
+      state.selectedCategories = selected;
+      document.querySelectorAll(".catcb").forEach(cb=>cb.checked = selected.has(cb.value));
+    }
+
+    function applyMobileFilter(){
+      syncMobileToDesktopFilter();
+      updateDashboard();
+      closeMobileSheets();
+    }
+
+    function resetFilters(){
+      $("searchInput").value="";
+      $("kabFilter").value="all";
+      $("sortFilter").value="rating-desc";
+      $("ratingRange").value=4.5;
+      $("ratingVal").textContent="4.5";
+
+      $("mSearchInput").value="";
+      $("mKabFilter").value="all";
+      $("mSortFilter").value="rating-desc";
+      $("mRatingRange").value=4.5;
+      $("mRatingVal").textContent="4.5";
+
+      const cats=[...new Set(geojson.features.map(f=>f.properties.category))];
+      state.selectedCategories=new Set(cats);
+      document.querySelectorAll(".catcb, .mcatcb").forEach(cb=>cb.checked=true);
+      updateDashboard();
+    }
+
+    function clearFilters(){
+      $("searchInput").value="";
+      $("kabFilter").value="all";
+      $("sortFilter").value="rating-desc";
+      $("ratingRange").value=0;
+      $("ratingVal").textContent="0.0";
+
+      $("mSearchInput").value="";
+      $("mKabFilter").value="all";
+      $("mSortFilter").value="rating-desc";
+      $("mRatingRange").value=0;
+      $("mRatingVal").textContent="0.0";
+
+      state.selectedCategories.clear();
+      document.querySelectorAll(".catcb, .mcatcb").forEach(cb=>cb.checked=false);
+      updateDashboard();
+    }
+
+    function initMap(){
+      state.map = L.map("map",{preferCanvas:true,zoomControl:true}).setView(DIY_CENTER,DIY_ZOOM);
+
+      const mobile = isMobile();
+
+      const cartoLight = L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",{ attribution:"&copy; OpenStreetMap &copy; CARTO" });
+      const cartoDark = L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",{ attribution:"&copy; OpenStreetMap &copy; CARTO" });
+      const voyager = L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",{ attribution:"&copy; OpenStreetMap &copy; CARTO" });
+
+      cartoDark.addTo(state.map);
+      state.layerControl = L.control.layers(
+        {"Carto Dark":cartoDark,"Carto Light":cartoLight,"Carto Voyager":voyager},
+        null,
+        {position:"topright",collapsed:mobile}
+      ).addTo(state.map);
+
+      L.control.scale({imperial:false}).addTo(state.map);
+
+      state.cluster = L.markerClusterGroup({showCoverageOnHover:false,maxClusterRadius:52,disableClusteringAtZoom:15});
+      state.plainLayer = L.layerGroup().addTo(state.map);
+      state.map.addLayer(state.cluster);
+    }
+
+    function makeMarker(f){
+      const p=f.properties,[lng,lat]=f.geometry.coordinates;
+      const color = COLORS[p.category] || "#2f7cff";
+      const emoji = ICONS[p.category] || "📍";
+
+      const icon=L.divIcon({
+        className:"",
+        html:`<div class="poi-marker" style="background:linear-gradient(135deg,${color},#4fa8ff)">${emoji}</div>`,
+        iconSize:[34,34],iconAnchor:[17,30],popupAnchor:[0,-26]
+      });
+
+      const m=L.marker([lat,lng],{icon});
+      m.bindPopup(popupHTML(f),{maxWidth:290});
+      m.on("click",()=>{
+        selectFeature(p.id);
+        if(isMobile()) openMobileSheet("detail");
+      });
+      return m;
+    }
+
+    function popupHTML(f){
+      const p=f.properties,[lng,lat]=f.geometry.coordinates;
+      const img = p.image || "";
+      const fallback = fallbackHTML("pop-img","Image unavailable").replace(/"/g, '&quot;');
+
+      return `
+        <div class="pop">
+          <div class="pop-h">${ICONS[p.category] || "📍"} ${p.name}</div>
+          <div class="pop-b">
+            <img class="pop-img" src="${img}" alt="Foto destinasi ${p.name}" loading="lazy"
+                 onerror="this.onerror=null;this.style.display='none';this.insertAdjacentHTML('afterend','${fallback}');">
+            <div class="pop-r"><b>Kategori:</b> ${p.category}</div>
+            <div class="pop-r"><b>Wilayah:</b> ${p.kabupaten}</div>
+            <div class="pop-r"><b>Rating:</b> ${p.rating}/5</div>
+            <div class="pop-r"><b>Harga Tiket:</b> Rp${p.price.toLocaleString("id-ID")}</div>
+            <div class="pop-r"><b>Akses:</b> ${p.access}</div>
+            <div class="detail-actions" style="margin-top:8px;">
+              <a class="a primary full" target="_blank" href="https://www.google.com/maps?q=${lat},${lng}" aria-label="Buka rute Google Maps menuju ${p.name}">Buka Rute Google Maps</a>
+              <button class="a" onclick="window.__openDetailById && window.__openDetailById(${p.id})" aria-label="Lihat detail ${p.name}">Lihat Detail</button>
+              <button class="a" onclick="bookmarkLoc(${p.id})" aria-label="Simpan ${p.name}">Simpan</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function drawMarkers(features){
+      state.cluster.clearLayers();
+      state.plainLayer.clearLayers();
+      state.markers = features.map(makeMarker);
+      if(state.useCluster) state.cluster.addLayers(state.markers);
+      else state.markers.forEach(m=>m.addTo(state.plainLayer));
+    }
+
+    function getFiltered(){
+      const q=$("searchInput").value.trim().toLowerCase();
+      const kab=$("kabFilter").value;
+      const min=Number($("ratingRange").value);
+      const sort=$("sortFilter").value;
+
+      let arr = geojson.features.filter(f=>{
+        const p=f.properties;
+        const text = `${p.name} ${p.kabupaten} ${p.category} ${p.desc} ${p.detail}`.toLowerCase();
+        return (q===""||text.includes(q))
+          && (kab==="all"||p.kabupaten===kab)
+          && (state.selectedCategories.size>0 && state.selectedCategories.has(p.category))
+          && (p.rating>=min);
+      });
+
+      arr.sort((a,b)=>{
+        const A=a.properties,B=b.properties;
+        if(sort==="rating-desc") return B.rating-A.rating;
+        if(sort==="rating-asc") return A.rating-B.rating;
+        if(sort==="name-asc") return A.name.localeCompare(B.name,"id");
+        return B.name.localeCompare(A.name,"id");
+      });
+
+      return arr;
+    }
+
+    function updateKPIs(features){
+      const total=features.length;
+      const avg=total?(features.reduce((s,f)=>s+f.properties.rating,0)/total).toFixed(2):"0.00";
+      const kab=new Set(features.map(f=>f.properties.kabupaten)).size;
+      const cat=new Set(features.map(f=>f.properties.category)).size;
+      $("kpiTotal").textContent=total;
+      $("kpiAvg").textContent=avg;
+      $("kpiKab").textContent=kab;
+      $("kpiCat").textContent=cat;
+    }
+
+    function renderBars(features){
+      const count={Gunung:0,Pantai:0,"Air Terjun":0,Hutan:0};
+      features.forEach(f=>count[f.properties.category]=(count[f.properties.category]||0)+1);
+      const max=Math.max(1,...Object.values(count));
+      $("catBars").innerHTML = Object.entries(count).map(([k,v])=>`
+        <div class="bar-row2">
+          <span>${k}</span>
+          <div class="bar2"><i style="width:${(v/max)*100}%"></i></div>
+          <span style="text-align:right">${v}</span>
+        </div>
+      `).join("");
+    }
+
+    function renderTable(features){
+      $("dataTable").innerHTML = features.map(f=>{
+        const p=f.properties;
+        return `<tr><td>${p.name}</td><td>${p.category}</td><td>${p.kabupaten}</td><td>${p.rating}</td><td>Rp${p.price.toLocaleString("id-ID")}</td></tr>`;
+      }).join("");
+    }
+
+    function renderList(features){
+      if(!features.length){
+        const html = `<div class="item"><div class="t">Data tidak ditemukan</div><div class="s">Silakan sesuaikan filter pencarian.</div></div>`;
+        $("locationList").innerHTML = html;
+        $("mLocationList").innerHTML = html;
+        return;
+      }
+
+      const html = features.map(f=>{
+        const p=f.properties;
+        const fallback = fallbackHTML("item-thumb","No image").replace(/"/g, '&quot;');
+        return `<div class="item" data-id="${p.id}">
+          <img class="item-thumb" src="${p.image || ""}" alt="Thumbnail destinasi ${p.name}" loading="lazy"
+               onerror="this.onerror=null;this.style.display='none';this.insertAdjacentHTML('afterend','${fallback}');">
+          <div class="t">${ICONS[p.category] || "📍"} ${p.name}<span class="chip-mini">${p.category}</span></div>
+          <div class="s">${p.kabupaten} • Rating ${p.rating} • Rp${p.price.toLocaleString("id-ID")}</div>
+        </div>`;
+      }).join("");
+
+      $("locationList").innerHTML = html;
+      $("mLocationList").innerHTML = html;
+
+      document.querySelectorAll("#locationList .item[data-id], #mLocationList .item[data-id]").forEach(el=>{
+        el.addEventListener("click",()=>{
+          const id=Number(el.dataset.id);
+          const f=state.filtered.find(x=>x.properties.id===id);
+          if(!f) return;
+          selectFeature(id);
+          const [lng,lat]=f.geometry.coordinates;
+          state.map.flyTo([lat,lng],13,{duration:.7});
+          const mk=state.markers.find(m=>Math.abs(m.getLatLng().lat-lat)<1e-7 && Math.abs(m.getLatLng().lng-lng)<1e-7);
+          if(mk) mk.openPopup();
+
+          if(isMobile()){
+            closeMobileSheets();
+            openMobileSheet("detail"); // otomatis buka detail setelah pilih dari daftar mobile
+          }
+        });
+      });
+    }
+
+    function renderSavedPlaces(){
+      const el = $("savedList");
+      if(!el) return;
+
+      const ids = [...state.bookmarks];
+      if(!ids.length){
+        el.innerHTML = `<div class="saved-item"><div class="saved-name">Belum ada destinasi tersimpan</div><div class="saved-sub">Simpan dari panel detail destinasi.</div></div>`;
+        return;
+      }
+
+      el.innerHTML = ids.map(id=>{
+        const f = getFeatureById(id);
+        if(!f) return "";
+        const p = f.properties;
+        return `
+          <div class="saved-item">
+            <div class="saved-top">
+              <div>
+                <div class="saved-name">${ICONS[p.category] || "📍"} ${p.name}</div>
+                <div class="saved-sub">${p.kabupaten} • ${p.category} • ⭐ ${p.rating}</div>
+              </div>
+              <div class="saved-actions">
+                <button class="saved-btn" data-focus="${p.id}" aria-label="Buka destinasi ${p.name}">Buka</button>
+                <button class="saved-btn" data-remove="${p.id}" aria-label="Hapus destinasi ${p.name}">Hapus</button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      el.querySelectorAll("[data-focus]").forEach(btn=>{
+        btn.addEventListener("click", ()=>focusDestinationById(Number(btn.dataset.focus)));
+      });
+
+      el.querySelectorAll("[data-remove]").forEach(btn=>{
+        btn.addEventListener("click", ()=>{
+          const id = Number(btn.dataset.remove);
+          state.bookmarks.delete(id);
+          saveBookmarks();
+          renderSavedPlaces();
+        });
+      });
+    }
+
+    function selectFeature(id){
+      state.selectedFeature = state.filtered.find(f=>f.properties.id===id) || null;
+      document.querySelectorAll(".item").forEach(i=>i.classList.remove("active"));
+      const activeEls = document.querySelectorAll(`.item[data-id="${id}"]`);
+      activeEls.forEach(a=>a.classList.add("active"));
+      renderDetail();
+    }
+
+    function renderDetail(){
+      const desktopBox=$("detailPanel");
+      const mobileBox=$("mDetailPanel");
+      const f=state.selectedFeature;
+      if(!f){
+        const txt = `<div class="detail-row">Pilih destinasi dari daftar atau peta untuk melihat detail.</div>`;
+        desktopBox.innerHTML=txt;
+        mobileBox.innerHTML=txt;
+        return;
+      }
+      const p=f.properties,[lng,lat]=f.geometry.coordinates;
+      const fallback = fallbackHTML("detail-img","Image unavailable").replace(/"/g, '&quot;');
+
+      const content = `
+        <img class="detail-img" src="${p.image || ""}" alt="Foto destinasi ${p.name}" loading="lazy"
+             onerror="this.onerror=null;this.style.display='none';this.insertAdjacentHTML('afterend','${fallback}');">
+        <h4>${ICONS[p.category] || "📍"} ${p.name}</h4>
+        <div class="detail-row"><b>Kategori:</b> ${p.category}</div>
+        <div class="detail-row"><b>Wilayah:</b> ${p.kabupaten}</div>
+        <div class="detail-row"><b>Rating:</b> ${p.rating}/5</div>
+        <div class="detail-row"><b>Harga Tiket:</b> Rp${p.price.toLocaleString("id-ID")}</div>
+        <div class="detail-row"><b>Akses:</b> ${p.access}</div>
+        <div class="detail-row"><b>Deskripsi:</b> ${p.desc}</div>
+        <div class="detail-actions">
+          <a class="a primary full" target="_blank" href="https://www.google.com/maps?q=${lat},${lng}" aria-label="Buka rute Google Maps menuju ${p.name}">Buka Rute Google Maps</a>
+          <button class="a" onclick="window.__openDetailById(${p.id})" aria-label="Lihat detail ${p.name}">Lihat Detail</button>
+          <button class="a" onclick="bookmarkLoc(${p.id})" aria-label="Simpan destinasi ${p.name}">Simpan</button>
+        </div>
+      `;
+      desktopBox.innerHTML=content;
+      mobileBox.innerHTML=content;
+    }
+
+    async function updateDashboard(){
+      $("loading").classList.add("show");
+      await wait(100);
+
+      state.filtered = getFiltered();
+      drawMarkers(state.filtered);
+      updateKPIs(state.filtered);
+      renderBars(state.filtered);
+      renderTable(state.filtered);
+      renderList(state.filtered);
+      renderSavedPlaces();
+
+      if(state.filtered.length){
+        const b=L.latLngBounds(state.filtered.map(f=>[f.geometry.coordinates[1],f.geometry.coordinates[0]]));
+        state.map.fitBounds(b,{padding:[40,40]});
+      } else {
+        state.map.setView(DIY_CENTER,DIY_ZOOM);
+      }
+
+      state.selectedFeature=null;
+      renderDetail();
+      $("loading").classList.remove("show");
+    }
+
+    function bookmarkLoc(id){
+      if(state.bookmarks.has(id)) state.bookmarks.delete(id);
+      else state.bookmarks.add(id);
+
+      saveBookmarks();
+      renderSavedPlaces();
+      alert(state.bookmarks.has(id) ? "Destinasi ditambahkan ke Destinasi Tersimpan." : "Destinasi dihapus dari Destinasi Tersimpan.");
+    }
+
+    function toggleCluster(){ state.useCluster=!state.useCluster; drawMarkers(state.filtered); }
+    function fitToFiltered(){
+      if(!state.filtered.length) return;
+      const b=L.latLngBounds(state.filtered.map(f=>[f.geometry.coordinates[1],f.geometry.coordinates[0]]));
+      state.map.fitBounds(b,{padding:[40,40]});
+    }
+    function resetMapView(){ state.map.setView(DIY_CENTER,DIY_ZOOM); }
+    function zoomToDIY(){ state.map.setView(DIY_CENTER,DIY_ZOOM); }
+
+    function refreshDashboard(){ updateDashboard(); }
+
+    // Bottom sheet handlers (ID WAJIB sesuai permintaan)
+    function closeMobileSheets(){
+      ["sheetFilter","sheetList","sheetDetail"].forEach(id=>$(id).classList.remove("show"));
+    }
+
+    function openMobileSheet(type){
+      closeMobileSheets();
+      if(type==="filter"){
+        $("mSearchInput").value = $("searchInput").value;
+        $("mKabFilter").value = $("kabFilter").value;
+        $("mSortFilter").value = $("sortFilter").value;
+        $("mRatingRange").value = $("ratingRange").value;
+        $("mRatingVal").textContent = Number($("mRatingRange").value).toFixed(1);
+        const selected = state.selectedCategories;
+        document.querySelectorAll(".mcatcb").forEach(cb=>cb.checked = selected.has(cb.value));
+        $("sheetFilter").classList.add("show");
+      }else if(type==="list"){
+        $("sheetList").classList.add("show");
+      }else if(type==="detail"){
+        $("sheetDetail").classList.add("show");
+      }
+    }
+
+    function syncMobileToDesktopFilter(){
+      $("searchInput").value = $("mSearchInput").value;
+      $("kabFilter").value = $("mKabFilter").value;
+      $("sortFilter").value = $("mSortFilter").value;
+      $("ratingRange").value = $("mRatingRange").value;
+      $("ratingVal").textContent = Number($("mRatingRange").value).toFixed(1);
+
+      const selected = new Set();
+      document.querySelectorAll(".mcatcb").forEach(cb=>{
+        if(cb.checked) selected.add(cb.value);
+      });
+      state.selectedCategories = selected;
+      document.querySelectorAll(".catcb").forEach(cb=>cb.checked = selected.has(cb.value));
+    }
+
+    function applyMobileFilter(){
+      syncMobileToDesktopFilter();
+      updateDashboard();
+      closeMobileSheets();
+    }
+
+    window.__openDetailById = function(id){
+      focusDestinationById(id);
+      if(isMobile()){
+        openMobileSheet("detail");
+      }
+    }
+
+    function renderFeaturedDestinations(){
+      const el = $("featuredGrid");
+      if(!el) return;
+      const top = [...geojson.features].sort((a,b)=>b.properties.rating-a.properties.rating).slice(0,4);
+
+      el.innerHTML = top.map(f=>{
+        const p = f.properties;
+        return `
+          <article class="featured-card" data-featured-id="${p.id}">
+            <div class="featured-img-wrap">
+              <img class="featured-img" src="${p.image || ""}" alt="Foto destinasi ${p.name}" loading="lazy"
+                   onerror="this.onerror=null;this.style.display='none';this.insertAdjacentHTML('afterend','<div class=&quot;featured-img&quot; style=&quot;display:flex;align-items:center;justify-content:center;color:#d7e8f8;background:linear-gradient(135deg,#1d2e47,#2a4768);&quot;>Image unavailable</div>');">
+              <div class="featured-overlay"></div>
+              <div class="featured-meta">
+                <h5>${p.name}</h5>
+                <small>${p.kabupaten} • ${p.category}</small>
+              </div>
+            </div>
+            <div class="featured-body">
+              <span>⭐ ${p.rating}</span>
+              <span class="chip-mini">Rp${p.price.toLocaleString("id-ID")}</span>
+            </div>
+          </article>
+        `;
+      }).join("");
+
+      el.querySelectorAll("[data-featured-id]").forEach(card=>{
+        card.addEventListener("click", ()=>{
+          const id = Number(card.dataset.featuredId);
+          state.pendingFocusId = id;
+          enterDashboard();
+        });
+      });
+    }
+
+    function enterDashboard(){
+      $("landingPage").style.display = "none";
+      $("dashboardWrapper").style.display = "block";
+      document.body.style.overflow = "hidden";
+
+      if(!state.mapInitialized){
+        initTopTime();
+        initFilters();
+        initMap();
+        updateDashboard();
+        state.mapInitialized=true;
+      }
+
+      setTimeout(()=>{
+        if(state.map){
+          state.map.invalidateSize(); // WAJIB setelah dashboard tampil
+          if(isMobile()){
+            state.map.setView(DIY_CENTER, DIY_ZOOM); // WAJIB mobile langsung fokus DIY
+          }
+        }
+      },160);
+
+      if(state.pendingFocusId){
+        const targetId = state.pendingFocusId;
+        state.pendingFocusId = null;
+        setTimeout(()=>focusDestinationById(targetId), 420);
+      }
+    }
+
+    function backToLanding(){
+      $("dashboardWrapper").style.display = "none";
+      $("landingPage").style.display = "block";
+      document.body.style.overflow = "auto";
+      closeMobileSheets();
+      window.scrollTo({top:0,behavior:"smooth"});
+    }
+
+    function initTopTime(){
+      const tick=()=>{$("timeNow").textContent=new Date().toLocaleTimeString("id-ID",{hour12:false});};
+      tick();setInterval(tick,1000);
+    }
+
+    initLandingStats();
+    renderFeaturedDestinations();
+  </script>
+</body>
+</html>
